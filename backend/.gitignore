@@ -1,0 +1,13 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+.env
+
+# Node (kalau ada)
+node_modules/
+
+# OS/editor junk
+.DS_Store
+Thumbs.db
+.vscode/

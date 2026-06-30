@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ruang Cerita</title>
+<style>
+  :root{
+    --cream:#FAF6F0;
+    --sage:#8FA083;
+    --sage-dark:#6E8063;
+    --terracotta:#C97B63;
+    --ink:#2E2B27;
+    --ink-soft:#6B665F;
+    --bubble-ai:#EFEAE1;
+    --line:#E3DDD2;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Georgia','Iowan Old Style',serif;
+    background:var(--cream);
+    color:var(--ink);
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  header{
+    width:100%;
+    max-width:640px;
+    padding:32px 20px 12px;
+    text-align:center;
+  }
+  header h1{
+    font-size:28px;
+    font-weight:400;
+    letter-spacing:0.5px;
+    margin:0;
+  }
+  header p{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:13px;
+    color:var(--ink-soft);
+    margin:6px 0 0;
+  }
+  .leaf{
+    display:inline-block;
+    width:10px;height:10px;
+    border-radius:0 60% 0 60%;
+    background:var(--sage);
+    margin-right:6px;
+    vertical-align:middle;
+  }
+  main{
+    width:100%;
+    max-width:640px;
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    padding:0 20px;
+  }
+  #chat{
+    flex:1;
+    overflow-y:auto;
+    padding:16px 0 24px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  .msg{
+    max-width:80%;
+    padding:12px 16px;
+    border-radius:16px;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:15px;
+    line-height:1.55;
+    white-space:pre-wrap;
+  }
+  .msg.user{
+    align-self:flex-end;
+    background:var(--sage);
+    color:#fff;
+    border-bottom-right-radius:4px;
+  }
+  .msg.ai{
+    align-self:flex-start;
+    background:var(--bubble-ai);
+    border-bottom-left-radius:4px;
+  }
+  .msg.escal{
+    align-self:flex-start;
+    background:#F6E6DC;
+    border:1px solid var(--terracotta);
+    border-bottom-left-radius:4px;
+  }
+  .tag{
+    align-self:flex-start;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:11px;
+    color:var(--ink-soft);
+    background:transparent;
+    padding:0 4px;
+  }
+  .typing{
+    align-self:flex-start;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:13px;
+    color:var(--ink-soft);
+    padding:6px 16px;
+  }
+  form{
+    display:flex;
+    gap:10px;
+    padding:14px 0 24px;
+    border-top:1px solid var(--line);
+  }
+  textarea{
+    flex:1;
+    resize:none;
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:12px 14px;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:15px;
+    background:#fff;
+    color:var(--ink);
+    min-height:46px;
+    max-height:120px;
+  }
+  textarea:focus{
+    outline:none;
+    border-color:var(--sage);
+  }
+  button{
+    border:none;
+    background:var(--sage-dark);
+    color:#fff;
+    border-radius:14px;
+    padding:0 22px;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:14px;
+    cursor:pointer;
+    transition:background .15s ease;
+  }
+  button:hover{ background:#5A6B50; }
+  button:disabled{ background:#BBC2B3; cursor:not-allowed; }
+  ::-webkit-scrollbar{width:6px;}
+  ::-webkit-scrollbar-thumb{background:var(--line); border-radius:3px;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="leaf"></span>Ruang Cerita</h1>
+  <p>Tempat aman untuk cerita apa pun yang sedang kamu rasakan.</p>
+</header>
+
+<main>
+  <div id="chat"></div>
+  <form id="form">
+    <textarea id="input" placeholder="Lagi ngerasain apa hari ini?" rows="1"></textarea>
+    <button id="sendBtn" type="submit">Kirim</button>
+  </form>
+</main>
+
+<script>
+  const API_BASE = "http://localhost:3001/api";
+  const USER_ID = localStorage.getItem("ruangcerita_uid") || (() => {
+    const id = "user_" + Math.random().toString(36).slice(2, 10);
+    localStorage.setItem("ruangcerita_uid", id);
+    return id;
+  })();
+
+  const chat = document.getElementById("chat");
+  const form = document.getElementById("form");
+  const input = document.getElementById("input");
+  const sendBtn = document.getElementById("sendBtn");
+
+  function addMessage(text, cls){
+    const div = document.createElement("div");
+    div.className = "msg " + cls;
+    div.textContent = text;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+    return div;
+  }
+
+  function addTag(text){
+    const div = document.createElement("div");
+    div.className = "tag";
+    div.textContent = text;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function addTyping(){
+    const div = document.createElement("div");
+    div.className = "typing";
+    div.textContent = "Ruang Cerita sedang mengetik…";
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+    return div;
+  }
+
+  input.addEventListener("input", () => {
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 120) + "px";
+  });
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const message = input.value.trim();
+    if (!message) return;
+
+    addMessage(message, "user");
+    input.value = "";
+    input.style.height = "auto";
+    sendBtn.disabled = true;
+    const typingEl = addTyping();
+
+    try {
+      const res = await fetch(`${API_BASE}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message, userId: USER_ID }),
+      });
+      const data = await res.json();
+      typingEl.remove();
+
+      if (!res.ok) {
+        addMessage("Maaf, ada gangguan di server. Coba lagi sebentar ya.", "ai");
+        return;
+      }
+
+      if (data.safe === false) {
+        addMessage(data.reply, "escal");
+      } else {
+        addTag(`${data.emosi} ${data.emoji}`);
+        addMessage(data.reply, "ai");
+      }
+    } catch (err) {
+      typingEl.remove();
+      addMessage("Koneksi ke server gagal. Pastikan backend sedang berjalan.", "ai");
+    } finally {
+      sendBtn.disabled = false;
+    }
+  });
+
+  addMessage("Hai, aku di sini buat dengerin. Cerita aja apa pun yang lagi kamu rasain 🌿", "ai");
+</script>
+
+</body>
+</html>
